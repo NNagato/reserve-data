@@ -1,6 +1,6 @@
 package huobi
 
 type Signer interface {
-	GetLiquiKey() string
-	LiquiSign(msg string) string
+	GetHuobiKey() string
+	HuobiSign(msg string) string
 }

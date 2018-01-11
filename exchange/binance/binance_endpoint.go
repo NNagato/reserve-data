@@ -242,7 +242,7 @@ func (self *BinanceEndpoint) Withdraw(token common.Token, amount *big.Int, addre
 		return result.ID, nil
 	} else {
 		log.Printf("Error: %v", err)
-		return "", errors.New("withdraw rejected by Binnace")
+		return "", errors.New("withdraw rejected by Binance")
 	}
 }
 

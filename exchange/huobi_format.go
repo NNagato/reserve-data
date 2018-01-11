@@ -19,7 +19,31 @@ type HuobiExchangeInfo struct {
 	} `json:"data"`
 }
 
+type HuobiInfo struct {
+	Status string `json:"status"`
+	Data   struct {
+		ID    uint64 `json:"id"`
+		Type  string `json:"type"`
+		State string `json:"state"`
+		List  []struct {
+			Currency string `json:"currency"`
+			Type     string `json:"type"`
+			Balance  string `json:"balance"`
+		} `json:"list"`
+	} `json:"data"`
+}
+
 type HuobiTrade struct {
+	Status  string `json:"status"`
+	OrderID string `json:"data"`
+}
+
+type HuobiCancel struct {
+	Status  string `json:"status"`
+	OrderID string `json:"data"`
+}
+
+type HuobiDeposit struct {
 	Status  string `json:"status"`
 	OrderID string `json:"data"`
 }
@@ -27,4 +51,25 @@ type HuobiTrade struct {
 type HuobiWithdraw struct {
 	Status     string `json:"status"`
 	WithdrawID uint64 `json:"data"`
+}
+
+type HuobiOrder struct {
+	Status string `json:"status"`
+	Data   struct {
+		OrderID     uint64 `json:"id"`
+		Symbol      string `json:"symbol"`
+		AccountID   uint64 `json:"account-id"`
+		OrigQty     string `json:"amount"`
+		Price       string `json:"price"`
+		Type        string `json:"type"`
+		ExecutedQty string `json:"field-amount"`
+	} `json:"data"`
+}
+
+type HuobiDepositAddress struct {
+	Msg        string `json:"msg"`
+	Address    string `json:"address"`
+	Success    bool   `json:"success"`
+	AddressTag string `json:"addressTag"`
+	Asset      string `json:"asset"`
 }
