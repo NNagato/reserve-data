@@ -73,3 +73,13 @@ type HuobiDepositAddress struct {
 	AddressTag string `json:"addressTag"`
 	Asset      string `json:"asset"`
 }
+
+type HuobiAccounts struct {
+	Status string `json:"status"`
+	Data   []struct {
+		ID     uint64 `json:"id"`
+		Type   string `json:"type"`
+		State  string `json:"state"`
+		UserID uint64 `json:"user-id"`
+	} `json:"data"`
+}

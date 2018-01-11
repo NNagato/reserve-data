@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,11 +32,18 @@ func (self *HuobiEndpoint) fillRequest(req *http.Request, signNeeded bool, timep
 	if signNeeded {
 		q := req.URL.Query()
 		sig := url.Values{}
-		sig.Set("Signature", self.signer.HuobiSign(q.Encode()))
+		method := req.Method
+		auth := q.Encode()
+		hostname := req.URL.Hostname()
+		path := req.URL.Path
+		payload := strings.Join([]string{method, hostname, path, auth}, "\n")
+		sig.Set("Signature", self.signer.HuobiSign(payload))
 		// Using separated values map for signature to ensure it is at the end
 		// of the query. This is required for /wapi apis from huobi without
 		// any damn documentation about it!!!
 		req.URL.RawQuery = q.Encode() + "&" + sig.Encode()
+		log.Println(req.URL.RawQuery)
+		// panic("check")
 	}
 }
 
@@ -50,8 +58,20 @@ func (self *HuobiEndpoint) GetResponse(
 	req.Header.Add("Accept", "application/json")
 
 	q := req.URL.Query()
-	for k, v := range params {
-		q.Add(k, v)
+	if signNeeded {
+		timestamp := fmt.Sprintf("%s", time.Now().Format("2006-01-02T15:04:05"))
+		params["SignatureMethod"] = "HmacSHA256"
+		params["SignatureVersion"] = "2"
+		params["AccessKeyId"] = self.signer.GetHuobiKey()
+		params["Timestamp"] = timestamp
+	}
+	var sortedParams []string
+	for k, _ := range params {
+		sortedParams = append(sortedParams, k)
+	}
+	sort.Strings(sortedParams)
+	for _, k := range sortedParams {
+		q.Add(k, params[k])
 	}
 	req.URL.RawQuery = q.Encode()
 	self.fillRequest(req, signNeeded, timepoint)
@@ -67,6 +87,23 @@ func (self *HuobiEndpoint) GetResponse(
 		log.Printf("request to %s, got response from huobi: %s\n", req.URL, common.TruncStr(resp_body))
 		return resp_body, err
 	}
+}
+
+// Get account list for later use
+func (self *HuobiEndpoint) GetAccounts() (exchange.HuobiAccounts, error) {
+	result := exchange.HuobiAccounts{}
+	timepoint := common.GetTimepoint()
+	resp, err := self.GetResponse(
+		"GET",
+		self.interf.PublicEndpoint()+"/v1/account/accounts",
+		map[string]string{},
+		true,
+		timepoint,
+	)
+	if err == nil {
+		json.Unmarshal(resp, &result)
+	}
+	return result, err
 }
 
 func (self *HuobiEndpoint) GetDepthOnePair(
@@ -95,8 +132,9 @@ func (self *HuobiEndpoint) Trade(tradeType string, base, quote common.Token, rat
 	result := exchange.HuobiTrade{}
 	symbol := base.ID + quote.ID
 	orderType := tradeType + "-limit"
+	accounts, _ := self.GetAccounts()
 	params := map[string]string{
-		"account_id": "", //TODO: get account id
+		"account_id": strconv.FormatUint(accounts.Data[0].ID, 10),
 		"symbol":     symbol,
 		"side":       strings.ToUpper(tradeType),
 		"type":       orderType,
@@ -234,9 +272,10 @@ func (self *HuobiEndpoint) Withdraw(token common.Token, amount *big.Int, address
 
 func (self *HuobiEndpoint) GetInfo(timepoint uint64) (exchange.HuobiInfo, error) {
 	result := exchange.HuobiInfo{}
+	accounts, _ := self.GetAccounts()
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/api/v3/account",
+		self.interf.AuthenticatedEndpoint()+"/v1/account/accounts/"+strconv.FormatUint(accounts.Data[0].ID, 10)+"/balance",
 		map[string]string{},
 		true,
 		timepoint,
@@ -273,7 +312,7 @@ func (self *HuobiEndpoint) GetDepositAddress(asset string) (exchange.HuobiDeposi
 	timepoint := common.GetTimepoint()
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/wapi/v3/depositAddress.html",
+		self.interf.AuthenticatedEndpoint()+"/",
 		map[string]string{
 			"asset": asset,
 		},

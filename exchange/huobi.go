@@ -263,7 +263,20 @@ func (self *Huobi) FetchEBalanceData(timepoint uint64) (common.EBalanceEntry, er
 			result.Valid = false
 			result.Error = fmt.Sprintf("Cannot fetch ebalance")
 		} else {
-			// TODO: update ebalance data
+			balances := resp_data.Data.List
+			for _, b := range balances {
+				tokenID := strings.ToUpper(b.Currency)
+				_, exist := common.SupportedTokens[tokenID]
+				if exist {
+					balance, _ := strconv.ParseFloat(b.Balance, 64)
+					if b.Type == "trade" {
+						result.AvailableBalance[tokenID] = balance
+					} else {
+						result.LockedBalance[tokenID] = balance
+					}
+					result.DepositBalance[tokenID] = 0
+				}
+			}
 			return result, nil
 		}
 	}
