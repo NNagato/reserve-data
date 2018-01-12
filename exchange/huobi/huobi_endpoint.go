@@ -32,18 +32,15 @@ func (self *HuobiEndpoint) fillRequest(req *http.Request, signNeeded bool, timep
 	if signNeeded {
 		q := req.URL.Query()
 		sig := url.Values{}
+
 		method := req.Method
 		auth := q.Encode()
 		hostname := req.URL.Hostname()
 		path := req.URL.Path
 		payload := strings.Join([]string{method, hostname, path, auth}, "\n")
+
 		sig.Set("Signature", self.signer.HuobiSign(payload))
-		// Using separated values map for signature to ensure it is at the end
-		// of the query. This is required for /wapi apis from huobi without
-		// any damn documentation about it!!!
 		req.URL.RawQuery = q.Encode() + "&" + sig.Encode()
-		log.Println(req.URL.RawQuery)
-		// panic("check")
 	}
 }
 
@@ -163,7 +160,7 @@ func (self *HuobiEndpoint) WithdrawHistory(startTime, endTime uint64) (exchange.
 	timepoint := common.GetTimepoint()
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/wapi/v3/withdrawHistory.html",
+		self.interf.AuthenticatedEndpoint()+"/", // TODO: update later
 		map[string]string{
 			"startTime": fmt.Sprintf("%d", startTime),
 			"endTime":   fmt.Sprintf("%d", endTime),
@@ -185,7 +182,7 @@ func (self *HuobiEndpoint) DepositHistory(startTime, endTime uint64) (exchange.H
 	timepoint := common.GetTimepoint()
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/wapi/v3/depositHistory.html",
+		self.interf.AuthenticatedEndpoint()+"/", // TODO: lack of api, update later
 		map[string]string{
 			"startTime": fmt.Sprintf("%d", startTime),
 			"endTime":   fmt.Sprintf("%d", endTime),
@@ -206,10 +203,9 @@ func (self *HuobiEndpoint) CancelOrder(symbol string, id uint64) (exchange.Huobi
 	result := exchange.HuobiCancel{}
 	resp_body, err := self.GetResponse(
 		"DELETE",
-		self.interf.AuthenticatedEndpoint()+"/api/v3/order",
+		self.interf.AuthenticatedEndpoint()+"/v1/order/orders/"+strconv.FormatUint(id, 10)+"/submitcancel",
 		map[string]string{
-			"symbol":  symbol,
-			"orderId": fmt.Sprintf("%d", id),
+			"order-id": fmt.Sprintf("%d", id),
 		},
 		true,
 		common.GetTimepoint(),
@@ -227,10 +223,9 @@ func (self *HuobiEndpoint) OrderStatus(symbol string, id uint64, timepoint uint6
 	result := exchange.HuobiOrder{}
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/api/v3/order",
+		self.interf.AuthenticatedEndpoint()+"/v1/order/orders/"+strconv.FormatUint(id, 10),
 		map[string]string{
-			"symbol":  symbol,
-			"orderId": fmt.Sprintf("%d", id),
+			"order-id": fmt.Sprintf("%d", id),
 		},
 		true,
 		timepoint,
@@ -248,12 +243,11 @@ func (self *HuobiEndpoint) Withdraw(token common.Token, amount *big.Int, address
 	result := exchange.HuobiWithdraw{}
 	resp_body, err := self.GetResponse(
 		"POST",
-		self.interf.AuthenticatedEndpoint()+"/wapi/v3/withdraw.html",
+		self.interf.AuthenticatedEndpoint()+"/v1/dw/withdraw/api/create",
 		map[string]string{
-			"asset":   token.ID,
-			"address": address.Hex(),
-			"name":    "reserve",
-			"amount":  strconv.FormatFloat(common.BigToFloat(amount, token.Decimal), 'f', -1, 64),
+			"currency": token.ID,
+			"address":  address.Hex(),
+			"amount":   strconv.FormatFloat(common.BigToFloat(amount, token.Decimal), 'f', -1, 64),
 		},
 		true,
 		timepoint,
@@ -288,11 +282,11 @@ func (self *HuobiEndpoint) GetInfo(timepoint uint64) (exchange.HuobiInfo, error)
 
 func (self *HuobiEndpoint) OpenOrdersForOnePair(
 	pair common.TokenPair, timepoint uint64) (exchange.HuobiOrder, error) {
-
+	// TODO: check again if use
 	result := exchange.HuobiOrder{}
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/api/v3/openOrders",
+		self.interf.AuthenticatedEndpoint()+"/", // TODO: check again if available
 		map[string]string{
 			"symbol": pair.Base.ID + pair.Quote.ID,
 		},
@@ -312,10 +306,10 @@ func (self *HuobiEndpoint) GetDepositAddress(asset string) (exchange.HuobiDeposi
 	timepoint := common.GetTimepoint()
 	resp_body, err := self.GetResponse(
 		"GET",
-		self.interf.AuthenticatedEndpoint()+"/",
-		map[string]string{
-			"asset": asset,
-		},
+		// TODO: this api have no damn documentation
+		// so need to figure it out how to use this
+		self.interf.AuthenticatedEndpoint()+"/dw/withdraw-virtual/addresses",
+		map[string]string{},
 		true,
 		timepoint,
 	)
