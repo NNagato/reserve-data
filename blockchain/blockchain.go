@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"math/big"
 
 	"github.com/KyberNetwork/reserve-data/common"
 	ether "github.com/ethereum/go-ethereum"
@@ -16,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"math/big"
 )
 
 type tbindex struct {
@@ -48,6 +48,7 @@ type Blockchain struct {
 	nonce         NonceCorpus
 	nonceDeposit  NonceCorpus
 	broadcaster   *Broadcaster
+	gasOracle    *GasOracle
 }
 
 func (self *Blockchain) AddToken(t common.Token) {
@@ -614,6 +615,8 @@ func NewBlockchain(
 	}
 	log.Printf("burner address: %s", burnerAddr.Hex())
 	log.Printf("network address: %s", networkAddr.Hex())
+	gasOracle := NewGasOracle()
+
 	return &Blockchain{
 		rpcClient:     client,
 		client:        ethereum,
@@ -631,5 +634,6 @@ func NewBlockchain(
 		nonce:         nonceCorpus,
 		nonceDeposit:  nonceDeposit,
 		broadcaster:   NewBroadcaster(clients),
+		gasOracle:   gasOracle,
 	}, nil
 }
