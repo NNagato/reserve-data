@@ -40,7 +40,7 @@ func GetConfigForSimulation() *Config {
 	}
 	fetcherRunner := http_runner.NewHttpRunner(8001)
 
-	fileSigner := signer.NewFileSigner("/go/src/github.com/KyberNetwork/reserve-data/cmd/config.json")
+	fileSigner, depositSigner := signer.NewFileSigner("/go/src/github.com/KyberNetwork/reserve-data/cmd/config.json")
 
 	exchangePool := NewSimulationExchangePool(
 		addressConfig, fileSigner, storage,
@@ -52,6 +52,7 @@ func GetConfigForSimulation() *Config {
 	endpoint := "http://blockchain:8545"
 
 	return &Config{
+<<<<<<< 2a5ded63257ae9825b33b073569db92c3f6c93da
 		ActivityStorage:         storage,
 		DataStorage:             storage,
 		FetcherStorage:          storage,
@@ -60,6 +61,7 @@ func GetConfigForSimulation() *Config {
 		FetcherExchanges:        exchangePool.FetcherExchanges(),
 		Exchanges:               exchangePool.CoreExchanges(),
 		BlockchainSigner:        fileSigner,
+		DepositSigner:           depositSigner,
 		EthereumEndpoint:        endpoint,
 		BackupEthereumEndpoints: []string{},
 		SupportedTokens:         tokens,

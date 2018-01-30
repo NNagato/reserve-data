@@ -21,6 +21,7 @@ type Config struct {
 	FetcherExchanges []fetcher.Exchange
 	Exchanges        []common.Exchange
 	BlockchainSigner blockchain.Signer
+	DepositSigner    blockchain.Signer
 
 	EnableAuthentication bool
 	AuthEngine           http.Authentication

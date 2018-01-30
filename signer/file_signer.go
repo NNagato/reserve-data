@@ -25,6 +25,8 @@ type FileSigner struct {
 	BitfinexSecret  string `json:"bitfinex_secret"`
 	Keystore        string `json:"keystore_path"`
 	Passphrase      string `json:"passphrase"`
+	KeystoreD       string `json:"keystore_deposit_path"`
+	PassphraseD     string `json:"passphrase_deposit"`
 	KNSecret        string `json:"kn_secret"`
 	KNReadOnly      string `json:"kn_readonly"`
 	KNConfiguration string `json:"kn_configuration"`
@@ -84,7 +86,7 @@ func (self FileSigner) BinanceSign(msg string) string {
 	return result
 }
 
-func NewFileSigner(file string) *FileSigner {
+func NewFileSigner(file string) (*FileSigner, *FileSigner) {
 	raw, err := ioutil.ReadFile(file)
 	if err != nil {
 		panic(err)
@@ -94,6 +96,7 @@ func NewFileSigner(file string) *FileSigner {
 	if err != nil {
 		panic(err)
 	}
+	depositSigner := signer
 	keyio, err := os.Open(signer.Keystore)
 	if err != nil {
 		panic(err)
@@ -102,9 +105,17 @@ func NewFileSigner(file string) *FileSigner {
 	if err != nil {
 		panic(err)
 	}
-
+	keyDIo, err := os.Open(signer.KeystoreD)
+	if err != nil {
+		panic(err)
+	}
+	authD, err := bind.NewTransactor(keyDIo, signer.PassphraseD)
+	if err != nil {
+		panic(err)
+	}
 	// auth.GasLimit = big.NewInt(1000000)
 	// auth.GasPrice = big.NewInt(35000000000)
 	signer.opts = auth
-	return &signer
+	depositSigner.opts = authD
+	return &signer, &depositSigner
 }

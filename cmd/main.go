@@ -109,6 +109,7 @@ func main() {
 
 	// nonceCorpus := nonce.NewAutoIncreasing(infura, fileSigner)
 	nonceCorpus := nonce.NewTimeWindow(infura, config.BlockchainSigner)
+	nonceDepositCorpus := nonce.NewTimeWindow(infura, config.DepositSigner)
 
 	bc, err := blockchain.NewBlockchain(
 		client,
@@ -120,7 +121,9 @@ func main() {
 		config.NetworkAddress,
 		config.ReserveAddress,
 		config.BlockchainSigner,
+		config.DepositSigner,
 		nonceCorpus,
+		nonceDepositCorpus,
 	)
 	if err != nil {
 		panic(err)

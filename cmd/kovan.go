@@ -40,7 +40,7 @@ func GetConfigForKovan() *Config {
 
 	fetcherRunner := fetcher.NewTickerRunner(3*time.Second, 2*time.Second, 3*time.Second, 5*time.Second, 5*time.Second)
 
-	fileSigner := signer.NewFileSigner("/go/src/github.com/KyberNetwork/reserve-data/cmd/config.json")
+	fileSigner, depositSigner := signer.NewFileSigner("/go/src/github.com/KyberNetwork/reserve-data/cmd/config.json")
 
 	exchangePool := NewKovanExchangePool(
 		addressConfig, fileSigner, storage,
@@ -51,6 +51,7 @@ func GetConfigForKovan() *Config {
 	bkendpoints := []string{}
 
 	return &Config{
+<<<<<<< 2a5ded63257ae9825b33b073569db92c3f6c93da
 		ActivityStorage:         storage,
 		DataStorage:             storage,
 		FetcherStorage:          storage,
@@ -59,6 +60,7 @@ func GetConfigForKovan() *Config {
 		FetcherExchanges:        exchangePool.FetcherExchanges(),
 		Exchanges:               exchangePool.CoreExchanges(),
 		BlockchainSigner:        fileSigner,
+		DepositSigner:           depositSigner,
 		EthereumEndpoint:        endpoint,
 		BackupEthereumEndpoints: bkendpoints,
 		SupportedTokens:         tokens,
