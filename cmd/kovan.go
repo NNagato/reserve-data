@@ -51,7 +51,6 @@ func GetConfigForKovan() *Config {
 	bkendpoints := []string{}
 
 	return &Config{
-<<<<<<< 2a5ded63257ae9825b33b073569db92c3f6c93da
 		ActivityStorage:         storage,
 		DataStorage:             storage,
 		FetcherStorage:          storage,

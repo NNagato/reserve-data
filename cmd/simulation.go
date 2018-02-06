@@ -52,7 +52,6 @@ func GetConfigForSimulation() *Config {
 	endpoint := "http://blockchain:8545"
 
 	return &Config{
-<<<<<<< 2a5ded63257ae9825b33b073569db92c3f6c93da
 		ActivityStorage:         storage,
 		DataStorage:             storage,
 		FetcherStorage:          storage,

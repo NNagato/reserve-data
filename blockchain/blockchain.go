@@ -34,8 +34,8 @@ type Blockchain struct {
 	rpcClient     *rpc.Client
 	client        *ethclient.Client
 	wrapper       *ContractWrapper
-	pricing       *Pricing
-	reserve       *ReserveContract
+	pricing       *KNPricingContract
+	reserve       *KNReserveContract
 	rm            ethereum.Address
 	wrapperAddr   ethereum.Address
 	pricingAddr   ethereum.Address
@@ -521,49 +521,6 @@ func (self *Blockchain) GetLogs(fromBlock uint64, timepoint uint64) ([]common.Tr
 		result = append(result, *tradeLog)
 	}
 	return result, nil
-}
-
-<<<<<<< 2a5ded63257ae9825b33b073569db92c3f6c93da
-=======
-func (self *Blockchain) Send(
-	token common.Token,
-	amount *big.Int,
-	dest ethereum.Address) (ethereum.Hash, error) {
-
-	opts, err := self.getDepositTransactOpts()
-	if err != nil {
-		return ethereum.Hash{}, err
-	} else {
-		tx, err := self.reserve.Withdraw(
-			opts,
-			ethereum.HexToAddress(token.Address),
-			amount, dest)
-		if err != nil {
-			return ethereum.Hash{}, err
-		} else {
-			return tx.Hash(), err
-		}
-	}
-}
-
-func (self *Blockchain) SetImbalanceStepFunction(token ethereum.Address, xBuy []*big.Int, yBuy []*big.Int, xSell []*big.Int, ySell []*big.Int) (*types.Transaction, error) {
-	opts, err := self.getTransactOpts()
-	if err != nil {
-		log.Printf("Getting transaction opts failed!!!!!!!\n")
-		return &types.Transaction{}, err
-	} else {
-		return self.pricing.SetImbalanceStepFunction(opts, token, xBuy, yBuy, xSell, ySell)
-	}
-}
-
-func (self *Blockchain) SetQtyStepFunction(token ethereum.Address, xBuy []*big.Int, yBuy []*big.Int, xSell []*big.Int, ySell []*big.Int) (*types.Transaction, error) {
-	opts, err := self.getTransactOpts()
-	if err != nil {
-		log.Printf("Getting transaction opts failed!!!!!!!\n")
-		return &types.Transaction{}, err
-	} else {
-		return self.pricing.SetQtyStepFunction(opts, token, xBuy, yBuy, xSell, ySell)
-	}
 }
 
 // func (self *Blockchain) sendToken(token common.Token, amount *big.Int, address ethereum.Address) (ethereum.Hash, error) {
