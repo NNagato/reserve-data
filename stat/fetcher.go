@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/reserve-data/common"
+	"github.com/KyberNetwork/reserve-data/stat/ratelog"
 )
 
 type CoinCapRateResponse []struct {
@@ -26,12 +27,8 @@ type EthRate struct {
 	Usd float64
 }
 
-type RateLog struct {
-	PriceUSD [][]float64 `json:"price_usd"`
-}
-
 type Fetcher struct {
-	storage                Storage
+	Storage                Storage
 	blockchain             Blockchain
 	runner                 FetcherRunner
 	ethRate                *EthRate
@@ -43,7 +40,7 @@ func NewFetcher(
 	storage Storage,
 	runner FetcherRunner) *Fetcher {
 	return &Fetcher{
-		storage:    storage,
+		Storage:    storage,
 		blockchain: nil,
 		runner:     runner,
 		ethRate: &EthRate{
@@ -51,54 +48,6 @@ func NewFetcher(
 			Usd: 0,
 		},
 	}
-}
-
-func fetchRate(timePoint uint64) ([]common.EthRateLog, float64, uint64, error) {
-	bulkEthRateLog := []common.EthRateLog{}
-	t := time.Unix(int64(timePoint/1000), 0).UTC()
-	month, year := t.Month(), t.Year()
-	var toMonth, toYear int
-	fromTime := common.GetTimeStamp(year, month, 1, 0, 0, 0, 0, time.UTC)
-	if int(month) == 12 {
-		toMonth = 1
-		toYear = year + 1
-	} else {
-		toMonth = int(month) + 1
-		toYear = year
-	}
-	toTime := common.GetTimeStamp(toYear, time.Month(toMonth), 1, 0, 0, 0, 0, time.UTC)
-	api := "https://graphs2.coinmarketcap.com/currencies/ethereum/" + strconv.FormatInt(int64(fromTime), 10) + "/" + strconv.FormatInt(int64(toTime), 10) + "/"
-	resp, err := http.Get(api)
-	if err != nil {
-		return bulkEthRateLog, 0, 0, err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return bulkEthRateLog, 0, 0, err
-	}
-	rateResponse := RateLog{}
-	err = json.Unmarshal(body, &rateResponse)
-	if err != nil {
-		return bulkEthRateLog, 0, 0, err
-	}
-	var ethRate float64
-	bulkPriceUsd := rateResponse.PriceUSD
-	for _, p := range bulkPriceUsd {
-		tickTimeStamp := uint64(p[0])
-		if ethRate == 0 && timePoint <= tickTimeStamp {
-			ethRate = p[1]
-		}
-		ethRateLog := common.EthRateLog{
-			Timepoint: tickTimeStamp,
-			Usd:       p[1],
-		}
-		bulkEthRateLog = append(bulkEthRateLog, ethRateLog)
-	}
-	if uint64(ethRate) == 0 {
-		return []common.EthRateLog{}, 0, 0, nil
-	}
-	return bulkEthRateLog, ethRate, fromTime, nil
 }
 
 func (self *Fetcher) Stop() error {
@@ -120,9 +69,7 @@ func (self *Fetcher) FetchEthRate() (err error) {
 
 	for _, rate := range rateResponse {
 		if rate.Symbol == "ETH" {
-
 			self.ethRate.Usd, err = strconv.ParseFloat(rate.PriceUSD, 64)
-
 			if err != nil {
 				log.Println("Cannot get usd rate: %s", err.Error())
 				return err
@@ -136,41 +83,15 @@ func (self *Fetcher) FetchEthRate() (err error) {
 func (self *Fetcher) GetEthRate(timePoint uint64) float64 {
 	self.ethRate.Mu.Lock()
 	defer self.ethRate.Mu.Unlock()
-	if common.IsCurrentMonth(timePoint) {
-		log.Println("use current price")
-		return self.ethRate.Usd
-	}
-	ethRateLog := self.storage.GetEthRateLog(common.GetMonthTimeStamp(timePoint))
-	if len(ethRateLog) != 0 {
-		ethRate := findEthRate(ethRateLog, timePoint)
-		log.Println("ethRate: ", ethRate)
-		if uint64(ethRate) != 0 {
-			return ethRate
-		}
+
+	rateLog := ratelog.NewRateLog(self.Storage)
+	ethRate, err := rateLog.GetEthRate(timePoint)
+	if err == nil && ethRate != 0 {
+		return ethRate
 	} else {
-		bulkEthRateLog, ethRate, monthTimePoint, err := fetchRate(timePoint)
-		if err == nil && ethRate != 0 {
-			err = self.storage.StoreEthRateLog(bulkEthRateLog, monthTimePoint)
-			if err != nil {
-				log.Println("failed to save ether rate log: ", err)
-			} else {
-				log.Println("save new data")
-			}
-			return ethRate
-		}
+		log.Println(err)
 	}
 	return self.ethRate.Usd
-}
-
-func findEthRate(ethRateLog []common.EthRateLog, timePoint uint64) float64 {
-	var ethRate float64
-	for _, e := range ethRateLog {
-		if e.Timepoint >= timePoint {
-			ethRate = e.Usd
-			break
-		}
-	}
-	return ethRate
 }
 
 func (self *Fetcher) SetBlockchain(blockchain Blockchain) {
@@ -208,10 +129,10 @@ func (self *Fetcher) RunBlockAndLogFetcher() {
 		timepoint := common.TimeToTimepoint(t)
 		self.FetchCurrentBlock(timepoint)
 		log.Printf("fetched block from blockchain")
-		lastBlock, err := self.storage.LastBlock()
+		lastBlock, err := self.Storage.LastBlock()
 		if err == nil {
 			nextBlock := self.FetchLogs(lastBlock+1, timepoint)
-			self.storage.UpdateLogBlock(nextBlock, timepoint)
+			self.Storage.UpdateLogBlock(nextBlock, timepoint)
 			log.Printf("nextBlock: %d", nextBlock)
 		} else {
 			log.Printf("failed to get last fetched log block, err: %+v", err)
@@ -321,7 +242,7 @@ func (self *Fetcher) aggregateTradeLog(trade common.TradeLog) (err error) {
 	}
 	for _, update := range updates {
 		for _, freq := range []string{"M", "H", "D"} {
-			err = self.storage.SetTradeStats(update.metric, freq, trade.Timestamp, update.tradeStats)
+			err = self.Storage.SetTradeStats(update.metric, freq, trade.Timestamp, update.tradeStats)
 			if err != nil {
 				return
 			}
